@@ -333,7 +333,7 @@ var Popover = (0, _react.createClass)({
     this.setState({ exiting: true });
     this.exitingAnimationTimer2 = setTimeout(function () {
       setTimeout(function () {
-        _this.containerEl.style.transform = flowToPopoverTranslations[_this.zone.flow] + '(' + _this.zone.order * 22 + 'px)';
+        _this.containerEl.style.transform = flowToPopoverTranslations[_this.zone.flow] + '(' + _this.zone.order * 14 + 'px)';
         _this.containerEl.style.opacity = '0';
       }, 0);
     }, 0);
@@ -345,7 +345,7 @@ var Popover = (0, _react.createClass)({
   animateEnter: function animateEnter() {
     /* Prepare `entering` style so that we can then animate it toward `entered`. */
 
-    this.containerEl.style.transform = flowToPopoverTranslations[this.zone.flow] + '(' + this.zone.order * 22 + 'px)';
+    this.containerEl.style.transform = flowToPopoverTranslations[this.zone.flow] + '(' + this.zone.order * 14 + 'px)';
     this.containerEl.style[jsprefix('Transform')] = this.containerEl.style.transform;
     this.containerEl.style.opacity = '0';
 
