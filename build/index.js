@@ -86,6 +86,11 @@ var flowToPopoverTranslations = {
   column: 'translateY'
 };
 
+var flowToPopoverTransitions = {
+  row: 'left',
+  column: 'top'
+};
+
 var Popover = (0, _react.createClass)({
   displayName: 'popover',
   propTypes: {
@@ -111,7 +116,7 @@ var Popover = (0, _react.createClass)({
       offset: 4,
       isOpen: false,
       onOuterAction: function noOperation() {},
-      enterExitTransitionDurationMs: 220,
+      enterExitTransitionDurationMs: 270,
       children: null,
       refreshIntervalMs: 200
     };
@@ -328,7 +333,7 @@ var Popover = (0, _react.createClass)({
     this.setState({ exiting: true });
     this.exitingAnimationTimer2 = setTimeout(function () {
       setTimeout(function () {
-        _this.containerEl.style.transform = flowToPopoverTranslations[_this.zone.flow] + '(' + _this.zone.order * 50 + 'px)';
+        _this.containerEl.style.transform = flowToPopoverTranslations[_this.zone.flow] + '(' + _this.zone.order * 22 + 'px)';
         _this.containerEl.style.opacity = '0';
       }, 0);
     }, 0);
@@ -347,6 +352,8 @@ var Popover = (0, _react.createClass)({
     /* After initial layout apply transition animations. */
     /* Hack: http://stackoverflow.com/questions/3485365/how-can-i-force-webkit-to-redraw-repaint-to-propagate-style-changes */
     this.containerEl.offsetHeight;
+
+    var transitionProperties = ['opacity', 'transform'];
 
     this.containerEl.style.transitionProperty = 'top, left, opacity, transform';
     this.containerEl.style.transitionDuration = this.props.enterExitTransitionDurationMs + 'ms';
