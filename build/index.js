@@ -1,5 +1,7 @@
 'use strict';
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _react = require('react');
 
 var _reactDom = require('react-dom');
@@ -86,17 +88,33 @@ var flowToPopoverTranslations = {
 
 var Popover = (0, _react.createClass)({
   displayName: 'popover',
-  mixins: [(0, _reactLayerMixin2.default)()],
   propTypes: {
     body: _react.PropTypes.node.isRequired,
     children: _react.PropTypes.element.isRequired,
     preferPlace: _react.PropTypes.oneOf(_layout2.default.validTypeValues),
     place: _react.PropTypes.oneOf(_layout2.default.validTypeValues),
     tipSize: _react.PropTypes.number,
+    offset: _react.PropTypes.number,
     refreshIntervalMs: _react.PropTypes.oneOfType([_react.PropTypes.number, _react.PropTypes.bool]),
     isOpen: _react.PropTypes.bool,
     onOuterAction: _react.PropTypes.func,
-    enterExitTransitionDurationMs: _react.PropTypes.number
+    enterExitTransitionDurationMs: _react.PropTypes.number,
+    className: _react.PropTypes.string,
+    style: _react.PropTypes.object
+  },
+  mixins: [(0, _reactLayerMixin2.default)()],
+  getDefaultProps: function getDefaultProps() {
+    return {
+      tipSize: 7,
+      preferPlace: null,
+      place: null,
+      offset: 4,
+      isOpen: false,
+      onOuterAction: function noOperation() {},
+      enterExitTransitionDurationMs: 220,
+      children: null,
+      refreshIntervalMs: 200
+    };
   },
   getInitialState: function getInitialState() {
     return {
@@ -106,21 +124,29 @@ var Popover = (0, _react.createClass)({
       toggle: false };
   },
   // for business logic tracking, should popover close/open?
-  getDefaultProps: function getDefaultProps() {
-    return {
-      tipSize: 7,
-      preferPlace: null,
-      place: null,
-      offset: 4,
-      isOpen: false,
-      onOuterAction: function noOperation() {},
-      enterExitTransitionDurationMs: 500,
-      children: null,
-      refreshIntervalMs: 200
-    };
+  componentDidMount: function componentDidMount() {
+    this.targetEl = (0, _reactDom.findDOMNode)(this);
+    if (this.props.isOpen) this.enter();
   },
-  checkTargetReposition: function checkTargetReposition() {
-    if (this.measureTargetBounds()) this.resolvePopoverLayout();
+  componentWillReceiveProps: function componentWillReceiveProps(propsNext) {
+    //log(`Component received props!`, propsNext)
+    var willOpen = !this.props.isOpen && propsNext.isOpen;
+    var willClose = this.props.isOpen && !propsNext.isOpen;
+
+    if (willOpen) this.open();else if (willClose) this.close();
+  },
+  componentDidUpdate: function componentDidUpdate(propsPrev, statePrev) {
+    //log(`Component did update!`)
+    var didOpen = !statePrev.toggle && this.state.toggle;
+    var didClose = statePrev.toggle && !this.state.toggle;
+
+    if (didOpen) this.enter();else if (didClose) this.exit();
+  },
+  componentWillUnmount: function componentWillUnmount() {
+    /* If the Popover was never opened then then tracking
+    initialization never took place and so calling untrack
+    would be an error. Also see issue 55. */
+    if (this.hasTracked) this.untrackPopover();
   },
   resolvePopoverLayout: function resolvePopoverLayout() {
 
@@ -257,6 +283,9 @@ var Popover = (0, _react.createClass)({
     this.tipEl.style.transform = flowToTipTranslations[zone.flow] + '(' + tipCrossPos + 'px)';
     this.tipEl.style[jsprefix('Transform')] = this.tipEl.style.transform;
   },
+  checkTargetReposition: function checkTargetReposition() {
+    if (this.measureTargetBounds()) this.resolvePopoverLayout();
+  },
   measurePopoverSize: function measurePopoverSize() {
     this.size = _layout2.default.El.calcSize(this.containerEl);
   },
@@ -270,35 +299,12 @@ var Popover = (0, _react.createClass)({
     this.targetBounds = newTargetBounds;
     return true;
   },
-  componentDidMount: function componentDidMount() {
-    this.targetEl = (0, _reactDom.findDOMNode)(this);
-    if (this.props.isOpen) this.enter();
-  },
-  componentWillReceiveProps: function componentWillReceiveProps(propsNext) {
-    //log(`Component received props!`, propsNext)
-    var willOpen = !this.props.isOpen && propsNext.isOpen;
-    var willClose = this.props.isOpen && !propsNext.isOpen;
-
-    if (willOpen) this.open();else if (willClose) this.close();
-  },
   open: function open() {
     if (this.state.exiting) this.animateExitStop();
     this.setState({ toggle: true, exited: false });
   },
   close: function close() {
-    /* TODO?: we currently do not setup any `entering` state flag because
-    nothing would really need to depend on it. Stopping animations is currently nothing
-    more than clearing some timeouts which are safe to clear even if undefined. The
-    primary reason for `exiting` state is for the `layerRender` logic. */
-    this.animateEnterStop();
     this.setState({ toggle: false });
-  },
-  componentDidUpdate: function componentDidUpdate(propsPrev, statePrev) {
-    //log(`Component did update!`)
-    var didOpen = !statePrev.toggle && this.state.toggle;
-    var didClose = statePrev.toggle && !this.state.toggle;
-
-    if (didOpen) this.enter();else if (didClose) this.exit();
   },
   enter: function enter() {
     if (_platform.isServer) return;
@@ -331,33 +337,23 @@ var Popover = (0, _react.createClass)({
       _this.setState({ exited: true, exiting: false });
     }, this.props.enterExitTransitionDurationMs);
   },
-  animateEnterStop: function animateEnterStop() {
-    clearTimeout(this.enteringAnimationTimer1);
-    clearTimeout(this.enteringAnimationTimer2);
-  },
   animateEnter: function animateEnter() {
-    var _this2 = this;
-
     /* Prepare `entering` style so that we can then animate it toward `entered`. */
 
-    this.containerEl.style.transform = flowToPopoverTranslations[this.zone.flow] + '(' + this.zone.order * 50 + 'px)';
+    this.containerEl.style.transform = flowToPopoverTranslations[this.zone.flow] + '(' + this.zone.order * 22 + 'px)';
     this.containerEl.style[jsprefix('Transform')] = this.containerEl.style.transform;
     this.containerEl.style.opacity = '0';
 
     /* After initial layout apply transition animations. */
+    /* Hack: http://stackoverflow.com/questions/3485365/how-can-i-force-webkit-to-redraw-repaint-to-propagate-style-changes */
+    this.containerEl.offsetHeight;
 
-    this.enteringAnimationTimer1 = setTimeout(function () {
-      _this2.tipEl.style.transition = 'transform 150ms ease-in';
-      _this2.tipEl.style[jsprefix('Transition')] = cssprefix('transform') + ' 150ms ease-in';
-      _this2.containerEl.style.transitionProperty = 'top, left, opacity, transform';
-      _this2.containerEl.style.transitionDuration = '500ms';
-      _this2.containerEl.style.transitionTimingFunction = 'cubic-bezier(0.230, 1.000, 0.320, 1.000)';
-      _this2.enteringAnimationTimer2 = setTimeout(function () {
-        _this2.containerEl.style.opacity = '1';
-        _this2.containerEl.style.transform = 'translateY(0)';
-        _this2.containerEl.style[jsprefix('Transform')] = _this2.containerEl.style.transform;
-      }, 0);
-    }, 0);
+    this.containerEl.style.transitionProperty = 'top, left, opacity, transform';
+    this.containerEl.style.transitionDuration = this.props.enterExitTransitionDurationMs + 'ms';
+    this.containerEl.style.transitionTimingFunction = 'cubic-bezier(0.230, 1.000, 0.320, 1.000)';
+    this.containerEl.style.opacity = '1';
+    this.containerEl.style.transform = 'translateY(0)';
+    this.containerEl.style[jsprefix('Transform')] = this.containerEl.style.transform;
   },
   trackPopover: function trackPopover() {
     var minScrollRefreshIntervalMs = 200;
@@ -447,12 +443,6 @@ var Popover = (0, _react.createClass)({
   measureFrameBounds: function measureFrameBounds() {
     this.frameBounds = _layout2.default.El.calcBounds(this.frameEl);
   },
-  componentWillUnmount: function componentWillUnmount() {
-    /* If the Popover was never opened then then tracking
-    initialization never took place and so calling untrack
-    would be an error. Also see issue 55. */
-    if (this.hasTracked) this.untrackPopover();
-  },
   renderLayer: function renderLayer() {
     if (this.state.exited) return null;
 
@@ -464,7 +454,7 @@ var Popover = (0, _react.createClass)({
 
     var popoverProps = {
       className: 'Popover ' + className,
-      style: (0, _utils.assign)({}, coreStyle, style)
+      style: _extends({}, coreStyle, style)
     };
 
     var tipProps = {

@@ -12,7 +12,7 @@ var _react2 = _interopRequireDefault(_react);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var Tip = _react2.default.createClass({
-  name: 'tip',
+  displayName: 'tip',
   render: function render() {
     var direction = this.props.direction;
 
