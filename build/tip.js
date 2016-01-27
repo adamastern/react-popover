@@ -42,9 +42,12 @@ var Tip = _react2.default.createClass({
     };
 
     var shapeStyle = {
-      width: styles.width,
-      height: styles.height,
-      transform: 'rotate(45deg)'
+      width: isPortrait ? styles.width : styles.width / 2,
+      height: isPortrait ? styles.height / 2 : styles.height,
+      transform: 'rotate(45deg)',
+      position: 'absolute',
+      top: 0,
+      left: 0
     };
 
     shapeStyle[jsprefix('Transform')] = shapeStyle.transform;
@@ -52,7 +55,11 @@ var Tip = _react2.default.createClass({
     return React.createElement(
       'div',
       { className: 'Popover-tip', style: styles },
-      React.createElement('div', { className: 'Popover-tipShape', style: shapeStyle })
+      React.createElement(
+        'div',
+        { className: 'Popover-tipClip', style: shapeStyle },
+        React.createElement('div', { className: 'Popover-tipShape' })
+      )
     );
   }
 });
